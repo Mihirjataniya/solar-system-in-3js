@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Solar System with Visible Orbits in Three.js</title>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <script type="module">
+    import * as THREE from 'https://cdn.skypack.dev/three@0.128.0';
+    import {OrbitControls} from 'https://cdn.skypack.dev/@three-ts/orbit-controls';
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 20, 100);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.minDistance = 10;
+    controls.maxDistance = 200;
+
+    const ambientLight = new THREE.AmbientLight(0x404040, 4);
+    scene.add(ambientLight);
+
+    const sunlight = new THREE.PointLight(0xffffff, 5, 500);
+    sunlight.position.set(10, 0, 25);
+    scene.add(sunlight);
+
+ 
+    const starGeometry = new THREE.BufferGeometry();
+    const starMaterial = new THREE.PointsMaterial({color: 0xffffff, size: 0.1, sizeAttenuation: true});
+    const starVertices = [];
+    for (let i = 0; i < 10000; i++) {
+      const x = THREE.MathUtils.randFloatSpread(2000);
+      const y = THREE.MathUtils.randFloatSpread(2000);
+      const z = THREE.MathUtils.randFloatSpread(2000);
+      starVertices.push(x, y, z);
+    }
+    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+    const stars = new THREE.Points(starGeometry, starMaterial);
+    scene.add(stars);
+
+    const sunTexture = new THREE.TextureLoader().load('https://s3-us-west-2.amazonaws.com/s.cdpn.io/123941/sunmap.jpg');
+    const sunGeometry = new THREE.SphereGeometry(5, 32, 32);
+    const sunMaterial = new THREE.MeshPhongMaterial({map: sunTexture, emissive: 0xFFFF00});
+    const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+    scene.add(sun);
+
+    const planets = [];
+    const planetInfo = [
+      {name: "Mercury", color: 0xaaaaaa, distance: 10, size: 1, speed: 0.04},
+      {name: "Venus", color: 0xffdd99, distance: 15, size: 1.2, speed: 0.03},
+      {name: "Earth", color: 0x2233ff, distance: 20, size: 1.5, speed: 0.02},
+      {name: "Mars", color: 0xff2200, distance: 25, size: 1.3, speed: 0.018},
+      {name: "Jupiter", color: 0xffaa22, distance: 33, size: 2.5, speed: 0.014},
+      {name: "Saturn", color: 0xccaaff, distance: 45, size: 2.2, speed: 0.012},
+      {name: "Uranus", color: 0x66ccff, distance: 55, size: 1.6, speed: 0.01},
+      {name: "Neptune", color: 0x2244bb, distance: 65, size: 1.5, speed: 0.008}
+    ];
+
+    planetInfo.forEach((info) => {
+      const geometry = new THREE.SphereGeometry(info.size, 32, 32);
+      const material = new THREE.MeshPhongMaterial({color: info.color});
+      const planet = new THREE.Mesh(geometry, material);
+      planet.position.x = info.distance;
+      planets.push({mesh: planet, speed: info.speed, angle: 0, distance: info.distance});
+      scene.add(planet);
+
+      // Orbits
+      const orbitGeometry = new THREE.RingGeometry(info.distance - 0.1, info.distance + 0.1, 64);
+      const orbitMaterial = new THREE.MeshBasicMaterial({color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.75});
+      const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
+      orbit.rotation.x = Math.PI / 2;
+      scene.add(orbit);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      planets.forEach((planet) => {
+        planet.angle += planet.speed;
+        planet.mesh.position.x = Math.cos(planet.angle) * planet.distance;
+        planet.mesh.position.z = Math.sin(planet.angle) * planet.distance;
+      });
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+
+</html>
